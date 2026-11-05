@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ album.name }} | EasyAlbumViewer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ asset_url('style.css') }}">
+</head>
+<body class="slideshow-body">
+  <header class="topbar">
+    <a class="wordmark" href="{{ url_for('index') }}"><span class="brand-mark">E</span> EasyAlbumViewer</a>
+    <a class="nav-link" href="{{ url_for('index') }}">All albums</a>
+  </header>
+  <main class="viewer-shell" data-photos='{{ photo_urls|tojson }}'>
+    <div class="viewer-heading"><div><p class="eyebrow">NOW VIEWING</p><h1>{{ album.name }}</h1></div><p class="viewer-count">{{ album.count }} photos</p></div>
+    <div class="viewer-toolbar">
+      <div class="fit-switch" role="group" aria-label="Photo display mode">
+        <button class="fit-button" type="button" data-fit="contain" aria-pressed="true">Fit</button>
+        <button class="fit-button" type="button" data-fit="cover" aria-pressed="false">Fill</button>
+      </div>
+      <label class="interval-control" for="slide-interval"><span>Switch every</span>
+        <select id="slide-interval" aria-label="Slideshow interval">
+          <option value="3">3 sec</option>
+          <option value="5" selected>5 sec</option>
+          <option value="8">8 sec</option>
+          <option value="10">10 sec</option>
+          <option value="15">15 sec</option>
+          <option value="30">30 sec</option>
+        </select>
+      </label>
+    </div>
+    <section class="photo-stage" aria-label="Slideshow">
+      <img class="slide-image" src="{{ photo_urls[0] }}" alt="Photo 1 of {{ album.count }}">
+      <div class="photo-shade"></div>
+      <div class="photo-caption"><span class="photo-number">01</span><span class="caption-divider"></span><span class="photo-total">{{ "%02d"|format(album.count) }}</span></div>
+    </section>
+    <div class="viewer-controls">
+      <div class="slide-status"><span class="status-dot"></span><span class="status-text">Playing</span></div>
+      <div class="control-group">
+        <button class="control-button" type="button" data-action="previous" aria-label="Previous photo" title="Previous photo">←</button>
+        <button class="control-button pause-button" type="button" data-action="toggle" aria-label="Pause slideshow" title="Pause slideshow">Ⅱ</button>
+        <button class="control-button" type="button" data-action="next" aria-label="Next photo" title="Next photo">→</button>
+        <button class="control-button fullscreen-button" type="button" data-action="fullscreen" aria-label="Enter fullscreen" title="Enter fullscreen">⛶</button>
+      </div>
+      <span class="sequence-label"><span class="current-index">1</span> / {{ album.count }}</span>
+    </div>
+  </main>
+  <script src="{{ asset_url('slideshow.js') }}" defer></script>
+</body>
+</html>

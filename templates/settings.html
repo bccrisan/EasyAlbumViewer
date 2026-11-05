@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Settings | EasyAlbumViewer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ asset_url('style.css') }}">
+</head>
+<body>
+  <header class="topbar">
+    <a class="wordmark" href="{{ url_for('index') }}"><span class="brand-mark">E</span> EasyAlbumViewer</a>
+    <nav><a class="nav-link" href="{{ url_for('index') }}">Library</a><a class="nav-link active" href="{{ url_for('settings') }}">Settings</a></nav>
+  </header>
+  <main class="page-shell settings-shell">
+    <a class="back-link" href="{{ url_for('index') }}">← Library</a>
+    <section class="settings-content">
+      <p class="eyebrow">PREFERENCES</p>
+      <h1>Library settings</h1>
+      <p class="subtle settings-intro">Choose the folder that contains your album folders. EasyAlbumViewer reads photos directly from this location.</p>
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}<div class="flash-list">{% for category, message in messages %}<p class="flash {{ category }}">{{ message }}</p>{% endfor %}</div>{% endif %}
+      {% endwith %}
+      <form class="settings-form" method="post">
+        <label for="root">Photo library folder</label>
+        <div class="input-row"><input id="root" name="root" type="text" placeholder="C:\Users\you\Pictures" value="{{ root or '' }}" required><button class="button button-outline" type="button" data-browse-url="{{ url_for('browse_library') }}">Browse...</button><button class="button button-dark" type="submit">Save folder</button></div>
+        <p class="field-hint" id="browse-status" aria-live="polite">Use an absolute folder path. Each immediate subfolder containing supported image files appears as an album.</p>
+      </form>
+      {% if root %}<div class="current-location"><span class="location-dot" aria-hidden="true"></span><div><span class="field-label">CURRENT LOCATION</span><p>{{ root }}</p></div></div>{% endif %}
+    </section>
+  </main>
+  <script src="{{ asset_url('settings.js') }}" defer></script>
+</body>
+</html>

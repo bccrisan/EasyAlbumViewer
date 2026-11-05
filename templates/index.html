@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>EasyAlbumViewer | Photo library</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ asset_url('style.css') }}">
+</head>
+<body>
+  <header class="topbar">
+    <a class="wordmark" href="{{ url_for('index') }}"><span class="brand-mark">E</span> EasyAlbumViewer</a>
+    <nav><a class="nav-link active" href="{{ url_for('index') }}">Library</a><a class="nav-link" href="{{ url_for('settings') }}">Settings</a></nav>
+  </header>
+  <main class="page-shell">
+    <section class="library-heading">
+      <div>
+        <p class="eyebrow">YOUR PHOTO LIBRARY</p>
+        <h1>Albums</h1>
+        {% if root %}<p class="subtle path-label">{{ root }}</p>{% else %}<p class="subtle">Choose a library folder to get started.</p>{% endif %}
+      </div>
+      <a class="button button-dark" href="{{ url_for('settings') }}"><span aria-hidden="true">＋</span> Library settings</a>
+    </section>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}<div class="flash-list">{% for category, message in messages %}<p class="flash {{ category }}">{{ message }}</p>{% endfor %}</div>{% endif %}
+    {% endwith %}
+
+    {% if albums %}
+      <section class="album-grid" aria-label="Photo albums">
+        {% for album in albums %}
+          <a class="album-tile" href="{{ url_for('slideshow', album_name=album.name) }}">
+            <div class="album-cover">
+              <img src="{{ url_for('photo', album_name=album.name, filename=album.cover) }}" alt="" loading="lazy">
+              <span class="cover-open" aria-hidden="true">↗</span>
+            </div>
+            <div class="album-meta"><h2>{{ album.name }}</h2><span>{{ album.count }} photo{% if album.count != 1 %}s{% endif %}</span></div>
+          </a>
+        {% endfor %}
+      </section>
+    {% elif root %}
+      <section class="empty-state"><span class="empty-icon" aria-hidden="true">▧</span><h2>No albums found</h2><p>Add folders containing photos to your selected library.</p></section>
+    {% else %}
+      <section class="welcome-state"><div class="welcome-art" aria-hidden="true"><div class="art-frame art-back"></div><div class="art-frame art-front"><span class="art-sun"></span><span class="art-hill hill-one"></span><span class="art-hill hill-two"></span></div></div><div><p class="eyebrow">A PLACE FOR YOUR PICTURES</p><h2>Make room for the moments.</h2><p class="subtle">Choose the folder that holds your albums to see them here.</p><a class="button button-dark" href="{{ url_for('settings') }}">Choose a folder <span aria-hidden="true">→</span></a></div></section>
+    {% endif %}
+  </main>
+</body>
+</html>
