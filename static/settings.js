@@ -31,26 +31,10 @@ if (settingsForm) {
     row.append(input, editButton, deleteButton);
     rows.append(row);
     input.focus();
+    return editButton;
   }
 
-  settingsForm.addEventListener("click", async event => {
-    const button = event.target.closest("button");
-    if (!button) return;
-
-    if (button.matches("[data-add-library]")) {
-      addLibraryRow();
-      status.textContent = "Choose a folder for the new library, then save your changes.";
-      return;
-    }
-
-    if (button.matches("[data-delete-library]")) {
-      button.closest(".library-row").remove();
-      status.textContent = "Library removed. Save your changes to apply the removal.";
-      return;
-    }
-
-    if (!button.matches("[data-edit-library]")) return;
-
+  async function chooseLibrary(button) {
     button.disabled = true;
     status.textContent = "Opening folder picker...";
     try {
@@ -68,5 +52,22 @@ if (settingsForm) {
     } finally {
       button.disabled = false;
     }
+  }
+
+  settingsForm.addEventListener("click", async event => {
+    const button = event.target.closest("button");
+    if (!button) return;
+    if (button.matches("[data-add-library]")) {
+      await chooseLibrary(addLibraryRow());
+      return;
+    }
+
+    if (button.matches("[data-delete-library]")) {
+      button.closest(".library-row").remove();
+      status.textContent = "Library removed. Save your changes to apply the removal.";
+      return;
+    }
+
+    if (button.matches("[data-edit-library]")) await chooseLibrary(button);
   });
 }

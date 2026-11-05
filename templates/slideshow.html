@@ -15,11 +15,35 @@
     <a class="nav-link" href="{{ url_for('index') }}">All albums</a>
   </header>
   <main class="viewer-shell" data-photos='{{ photo_urls|tojson }}'>
+    <aside class="album-drawer" aria-label="Album navigation">
+      <button class="album-drawer-toggle" type="button" aria-label="Open album menu" aria-expanded="false" aria-controls="album-menu">☰</button>
+      <div class="album-drawer-panel" id="album-menu">
+        <div class="album-drawer-heading">
+          <h2>Albums</h2>
+          <button class="album-drawer-lock" type="button" aria-label="Lock album menu open" aria-pressed="false">Lock</button>
+        </div>
+        <nav class="album-drawer-list" aria-label="Albums">
+          {% for item in albums %}
+            <a class="album-drawer-link{% if item.name == album.name and item.library == album.library %} active{% endif %}"
+               href="{{ url_for('slideshow', album_name=item.name, library=item.library) }}"
+               {% if item.name == album.name and item.library == album.library %}aria-current="page"{% endif %}>
+              <span>{{ item.name }}</span>
+              <small>Library {{ item.library + 1 }}</small>
+            </a>
+          {% endfor %}
+        </nav>
+      </div>
+    </aside>
     <div class="viewer-heading"><div><p class="eyebrow">NOW VIEWING</p><h1>{{ album.name }}</h1></div><p class="viewer-count">{{ album.count }} photos</p></div>
     <div class="viewer-toolbar">
       <div class="fit-switch" role="group" aria-label="Photo display mode">
         <button class="fit-button" type="button" data-fit="contain" aria-pressed="true">Fit</button>
         <button class="fit-button" type="button" data-fit="cover" aria-pressed="false">Fill</button>
+      </div>
+      <div class="zoom-controls" role="group" aria-label="Photo zoom">
+        <button class="zoom-button" type="button" data-zoom="out" aria-label="Zoom out" title="Zoom out">−</button>
+        <span class="zoom-level" aria-live="polite">300%</span>
+        <button class="zoom-button" type="button" data-zoom="in" aria-label="Zoom in" title="Zoom in" disabled>+</button>
       </div>
       <label class="interval-control" for="slide-interval"><span>Switch every</span>
         <select id="slide-interval" aria-label="Slideshow interval">
@@ -33,7 +57,9 @@
       </label>
     </div>
     <section class="photo-stage" aria-label="Slideshow">
-      <img class="slide-image" src="{{ photo_urls[0] }}" alt="Photo 1 of {{ album.count }}">
+      <div class="photo-scroll-content">
+        <img class="slide-image" src="{{ photo_urls[0] }}" alt="Photo 1 of {{ album.count }}">
+      </div>
       <div class="photo-shade"></div>
       <div class="photo-caption"><span class="photo-number">01</span><span class="caption-divider"></span><span class="photo-total">{{ "%02d"|format(album.count) }}</span></div>
     </section>
@@ -47,6 +73,15 @@
       </div>
       <span class="sequence-label"><span class="current-index">1</span> / {{ album.count }}</span>
     </div>
+    <nav class="photo-filmstrip" aria-label="Photos in this album">
+      {% for photo_url in photo_urls %}
+        <button class="filmstrip-photo{% if loop.first %} active{% endif %}" type="button" data-photo-index="{{ loop.index0 }}"
+                aria-label="Show photo {{ loop.index }} of {{ album.count }}"
+                aria-pressed="{{ 'true' if loop.first else 'false' }}">
+          <img src="{{ photo_url }}" alt="" loading="lazy">
+        </button>
+      {% endfor %}
+    </nav>
   </main>
   <script src="{{ asset_url('slideshow.js') }}" defer></script>
 </body>

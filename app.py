@@ -161,9 +161,10 @@ def create_app():
     @app.get("/album/<path:album_name>")
     def slideshow(album_name):
         library_index = request.args.get("library", default=0, type=int)
+        available_albums = albums()
         available = next(
             (
-                album for album in albums()
+                album for album in available_albums
                 if album["name"] == album_name and album["library"] == library_index
             ),
             None,
@@ -175,7 +176,12 @@ def create_app():
             url_for("photo", album_name=album_name, filename=photo.name, library=library_index)
             for photo in photos
         ]
-        return render_template("slideshow.html", album=available, photo_urls=photo_urls)
+        return render_template(
+            "slideshow.html",
+            album=available,
+            albums=available_albums,
+            photo_urls=photo_urls,
+        )
 
     @app.get("/media/<path:album_name>/<path:filename>")
     def photo(album_name, filename):
