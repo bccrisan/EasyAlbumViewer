@@ -41,10 +41,6 @@ if (viewer) {
     fitMode = mode === "cover" ? "cover" : "contain";
     viewer.classList.toggle("fit-cover", fitMode === "cover");
     viewer.classList.toggle("fit-contain", fitMode === "contain");
-    image.style.objectFit = fitMode;
-    image.style.width = "100%";
-    image.style.height = "100%";
-    image.style.display = "block";
     viewer.querySelectorAll("[data-fit]").forEach(button => {
       button.setAttribute("aria-pressed", String(button.dataset.fit === fitMode));
     });

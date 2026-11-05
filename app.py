@@ -45,19 +45,30 @@ def create_app():
 
         return {"asset_url": asset_url}
 
-    def library_root():
+    def saved_library_paths():
         try:
             data = json.loads(settings_path.read_text(encoding="utf-8"))
-            root = Path(data["root"]).expanduser().resolve(strict=True)
-            return root if root.is_dir() else None
+            if not isinstance(data, dict):
+                return []
+            paths = data.get("libraries")
+            if paths is None:
+                root = data.get("root")
+                paths = [root] if root else []
+            if not isinstance(paths, list):
+                return []
+            return [path for path in paths if isinstance(path, str) and path.strip()]
         except (OSError, ValueError, KeyError, TypeError):
-            return None
+            return []
 
-    def clear_library_setting():
+    def library_root(library_index=0):
+        paths = saved_library_paths()
+        if library_index < 0 or library_index >= len(paths):
+            return None
         try:
-            settings_path.unlink(missing_ok=True)
-        except OSError:
-            app.logger.exception("Unable to clear the saved library folder")
+            root = Path(paths[library_index]).expanduser().resolve(strict=True)
+            return root if root.is_dir() else None
+        except (OSError, ValueError):
+            return None
 
     def natural_key(value):
         return [(1, int(part)) if part.isdigit() else (0, part.casefold()) for part in re.split(r"(\d+)", value)]
@@ -71,58 +82,73 @@ def create_app():
         )
 
     def albums():
-        root = library_root()
-        if not root:
-            return []
         found = []
-        try:
-            folders = list(root.iterdir())
-        except OSError as error:
-            app.logger.warning("Unable to read library folder %s: %s", root, error)
-            clear_library_setting()
-            return []
-        for folder in folders:
-            if not folder.is_dir():
+        for library_index in range(len(saved_library_paths())):
+            root = library_root(library_index)
+            if not root:
                 continue
             try:
-                folder.resolve().relative_to(root)
-            except (OSError, ValueError):
-                continue
-            try:
-                photos = image_files(folder)
+                folders = list(root.iterdir())
             except OSError as error:
-                app.logger.warning("Skipping unreadable album folder %s: %s", folder, error)
+                app.logger.warning("Unable to read library folder %s: %s", root, error)
                 continue
-            if photos:
-                found.append({"name": folder.name, "count": len(photos), "cover": photos[0].name})
+            for folder in folders:
+                if not folder.is_dir():
+                    continue
+                try:
+                    folder.resolve().relative_to(root)
+                except (OSError, ValueError):
+                    continue
+                try:
+                    photos = image_files(folder)
+                except OSError as error:
+                    app.logger.warning("Skipping unreadable album folder %s: %s", folder, error)
+                    continue
+                if photos:
+                    found.append({
+                        "name": folder.name,
+                        "count": len(photos),
+                        "cover": photos[0].name,
+                        "library": library_index,
+                    })
         return sorted(found, key=lambda album: natural_key(album["name"]))
 
     @app.get("/")
     def index():
-        return render_template("index.html", albums=albums(), root=library_root())
+        return render_template("index.html", albums=albums(), libraries=saved_library_paths())
 
     @app.errorhandler(500)
     def handle_internal_error(error):
-        clear_library_setting()
-        flash("The saved photo folder was cleared after an error. Choose an accessible folder to continue.", "error")
+        flash("Unable to load the photo library. Check the configured folders and try again.", "error")
         return redirect(url_for("index"))
 
     @app.route("/settings", methods=["GET", "POST"])
     def settings():
         if request.method == "POST":
-            entered_root = request.form.get("root", "").strip()
+            entered_paths = request.form.getlist("libraries")
+            if "libraries" not in request.form:
+                entered_paths = [request.form.get("root", "")]
+            libraries = []
+            seen = set()
             try:
-                if not entered_root:
-                    raise ValueError("Choose an existing folder.")
-                resolved = Path(entered_root).expanduser().resolve(strict=True)
-                if not resolved.is_dir():
-                    raise ValueError("That location is not a folder.")
-                settings_path.write_text(json.dumps({"root": str(resolved)}, indent=2), encoding="utf-8")
-                flash("Photo library folder saved.", "success")
+                for entered_path in entered_paths:
+                    entered_path = entered_path.strip()
+                    if not entered_path:
+                        continue
+                    resolved = Path(entered_path).expanduser().resolve(strict=True)
+                    if not resolved.is_dir():
+                        raise ValueError(f"That location is not a folder: {entered_path}")
+                    normalized = str(resolved)
+                    if normalized.casefold() not in seen:
+                        seen.add(normalized.casefold())
+                        libraries.append(normalized)
+                settings_path.write_text(json.dumps({"libraries": libraries}, indent=2), encoding="utf-8")
+                flash("Photo libraries saved.", "success")
                 return redirect(url_for("index"))
             except (OSError, ValueError) as error:
-                flash(str(error) or "Choose an existing folder.", "error")
-        return render_template("settings.html", root=library_root())
+                flash(str(error) or "Choose existing folders.", "error")
+                return render_template("settings.html", libraries=entered_paths)
+        return render_template("settings.html", libraries=saved_library_paths())
 
     @app.post("/settings/browse")
     def browse_library():
@@ -134,16 +160,27 @@ def create_app():
 
     @app.get("/album/<path:album_name>")
     def slideshow(album_name):
-        available = next((album for album in albums() if album["name"] == album_name), None)
+        library_index = request.args.get("library", default=0, type=int)
+        available = next(
+            (
+                album for album in albums()
+                if album["name"] == album_name and album["library"] == library_index
+            ),
+            None,
+        )
         if not available:
             abort(404)
-        photos = image_files(library_root() / album_name)
-        photo_urls = [url_for("photo", album_name=album_name, filename=photo.name) for photo in photos]
+        photos = image_files(library_root(library_index) / album_name)
+        photo_urls = [
+            url_for("photo", album_name=album_name, filename=photo.name, library=library_index)
+            for photo in photos
+        ]
         return render_template("slideshow.html", album=available, photo_urls=photo_urls)
 
     @app.get("/media/<path:album_name>/<path:filename>")
     def photo(album_name, filename):
-        root = library_root()
+        library_index = request.args.get("library", default=0, type=int)
+        root = library_root(library_index)
         if not root:
             abort(404)
         folder = (root / album_name).resolve()
